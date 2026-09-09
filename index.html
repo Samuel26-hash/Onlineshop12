@@ -35,8 +35,9 @@ body{
 .hero h1{ font-size:44px; line-height:1.15; margin:0 0 20px; font-weight:500; }
 .hero-sub{ font-size:18px; color:var(--stone); max-width:38ch; margin:0 0 28px; }
 .hero-figure{ aspect-ratio:4/5; border-radius:var(--radius); background: radial-gradient(ellipse at 35% 30%, #d8c3a8 0%, transparent 55%), linear-gradient(160deg, var(--clay) 0%, var(--clay-dark) 100%); }
-.btn-primary{ display:inline-block; background:var(--clay); color:#fff; font-family:inherit; font-size:16px; text-decoration:none; border:none; border-radius:var(--radius); padding:13px 24px; cursor:pointer; }
+.btn-primary{ display:inline-block; background:var(--clay); color:#fff; font-family:inherit; font-size:16px; text-decoration:none; border:none; border-radius:var(--radius); padding:13px 24px; cursor:pointer; text-align:center; }
 .btn-primary:hover{ background:var(--clay-dark); }
+.btn-primary:disabled{ background:var(--stone); cursor:not-allowed; }
 .btn-block{ width:100%; }
 .section-title{ font-size:22px; font-weight:500; margin:64px 0 28px; }
 .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:32px 28px; padding-bottom:80px; }
@@ -62,14 +63,11 @@ body{
 .cart-note{ font-size:12px; color:var(--stone); text-align:center; margin:10px 0 0; }
 .cart-backdrop{ position:fixed; inset:0; background:rgba(43,38,33,0.35); opacity:0; pointer-events:none; transition:opacity 0.25s ease; z-index:30; }
 .cart-backdrop.open{ opacity:1; pointer-events:auto; }
-.test-banner{ background:var(--ink); color:#fff; text-align:center; font-size:13px; padding:8px 12px; }
 @media (max-width: 760px){ .hero-grid{ grid-template-columns:1fr; padding:48px 24px; } .hero h1{ font-size:32px; } .grid{ grid-template-columns:repeat(2,1fr); } }
 @media (max-width: 480px){ .grid{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-
-<div class="test-banner">Provisorische Testversion — noch nicht online, nur zum Ausprobieren</div>
 
 <header class="site-header">
   <div class="wrap header-row">
@@ -98,7 +96,7 @@ body{
 </main>
 
 <footer class="site-footer">
-  <div class="wrap"><p>Atelier Nord · Demo-Vorlage, erstellt mit Claude · Kein echter Zahlungsvorgang</p></div>
+  <div class="wrap"><p>Atelier Nord · Sichere Bezahlung mit Stripe</p></div>
 </footer>
 
 <aside class="cart-drawer" id="cartDrawer">
@@ -110,7 +108,7 @@ body{
   <div class="cart-footer">
     <div class="cart-total-row"><span>Summe</span><span id="cartTotal">CHF 0.00</span></div>
     <button class="btn-primary btn-block" id="checkoutBtn">Zur Kasse</button>
-    <p class="cart-note">Demo — hier würde später Stripe/TWINT eingebunden.</p>
+    <p class="cart-note">Sichere Abwicklung über Stripe</p>
   </div>
 </aside>
 <div class="cart-backdrop" id="cartBackdrop"></div>
@@ -124,6 +122,7 @@ const products = [
   { id: 5, name: "Kanne, geriffelt", price: 68, color: "#8f6a4c" },
   { id: 6, name: "Becher, uni-blau", price: 28, color: "#7c8b96" },
 ];
+
 let cart = [];
 const productGrid = document.getElementById("productGrid");
 const cartToggle = document.getElementById("cartToggle");
@@ -146,6 +145,7 @@ function renderProducts(){
       </div>
     </div>`).join("");
 }
+
 function addToCart(id){
   const product = products.find(p => p.id === id);
   const existing = cart.find(i => i.id === id);
@@ -153,7 +153,9 @@ function addToCart(id){
   else cart.push({ id: product.id, name: product.name, price: product.price, qty: 1 });
   renderCart(); openCart();
 }
+
 function removeFromCart(id){ cart = cart.filter(i => i.id !== id); renderCart(); }
+
 function renderCart(){
   const totalQty = cart.reduce((s,i)=>s+i.qty,0);
   const totalPrice = cart.reduce((s,i)=>s+i.qty*i.price,0);
@@ -166,17 +168,48 @@ function renderCart(){
       <div>${i.qty} × CHF ${i.price.toFixed(2)}</div>
     </div>`).join("");
 }
+
 function openCart(){ cartDrawer.classList.add("open"); cartBackdrop.classList.add("open"); }
 function closeCart(){ cartDrawer.classList.remove("open"); cartBackdrop.classList.remove("open"); }
+
 productGrid.addEventListener("click", e => { if (e.target.matches(".product-add")) addToCart(Number(e.target.dataset.id)); });
 cartItems.addEventListener("click", e => { if (e.target.matches(".cart-item-remove")) removeFromCart(Number(e.target.dataset.id)); });
 cartToggle.addEventListener("click", openCart);
 cartClose.addEventListener("click", closeCart);
 cartBackdrop.addEventListener("click", closeCart);
-checkoutBtn.addEventListener("click", () => {
+
+// --- ECHTER CHECKOUT MIT STRIPE ---
+checkoutBtn.addEventListener("click", async () => {
   if (cart.length === 0){ alert("Dein Warenkorb ist leer."); return; }
-  alert("Demo: Hier würde der echte Checkout starten (z.B. über Stripe).");
+  
+  checkoutBtn.disabled = true;
+  checkoutBtn.textContent = "Wird geladen...";
+
+  try {
+    const response = await fetch('/.netlify/functions/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cart: cart })
+    });
+
+    const session = await response.json();
+
+    if (session.url) {
+      // Weiterleitung direkt zu Stripe
+      window.location.href = session.url;
+    } else {
+      alert('Fehler beim Starten des Checkouts: ' + (session.error || 'Unbekannter Fehler'));
+      checkoutBtn.disabled = false;
+      checkoutBtn.textContent = "Zur Kasse";
+    }
+  } catch (error) {
+    console.error('Checkout Fehler:', error);
+    alert('Verbindungsfehler zum Zahlungs-Server.');
+    checkoutBtn.disabled = false;
+    checkoutBtn.textContent = "Zur Kasse";
+  }
 });
+
 renderProducts(); renderCart();
 </script>
 </body>

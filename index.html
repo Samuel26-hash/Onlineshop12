@@ -178,38 +178,13 @@ cartToggle.addEventListener("click", openCart);
 cartClose.addEventListener("click", closeCart);
 cartBackdrop.addEventListener("click", closeCart);
 
+// --- ECHTER CHECKOUT MIT STRIPE ---
 checkoutBtn.addEventListener("click", async () => {
   if (cart.length === 0){ 
     alert("Dein Warenkorb ist leer."); 
     return; 
   }
 
-  checkoutBtn.disabled = true;
-  checkoutBtn.textContent = "Wird geladen...";
-
-  try {
-    const response = await fetch('/.netlify/functions/create-checkout-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cart })
-    });
-
-    const session = await response.json();
-
-    if (session.url) {
-      window.location.href = session.url;
-    } else {
-      alert('Fehler beim Starten des Checkouts: ' + (session.error || 'Unbekannter Fehler'));
-      checkoutBtn.disabled = false;
-      checkoutBtn.textContent = "Zur Kasse";
-    }
-  } catch (error) {
-    console.error('Checkout Fehler:', error);
-    alert('Verbindungsfehler zum Zahlungs-Server.');
-    checkoutBtn.disabled = false;
-    checkoutBtn.textContent = "Zur Kasse";
-  }
-});  
   checkoutBtn.disabled = true;
   checkoutBtn.textContent = "Wird geladen...";
 
@@ -223,7 +198,6 @@ checkoutBtn.addEventListener("click", async () => {
     const session = await response.json();
 
     if (session.url) {
-      // Weiterleitung direkt zu Stripe
       window.location.href = session.url;
     } else {
       alert('Fehler beim Starten des Checkouts: ' + (session.error || 'Unbekannter Fehler'));
@@ -241,4 +215,4 @@ checkoutBtn.addEventListener("click", async () => {
 renderProducts(); renderCart();
 </script>
 </body>
-</html> 
+</html>

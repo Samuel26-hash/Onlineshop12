@@ -1,8 +1,7 @@
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
-exports.handler = async function (event) {
+exports.handler = async (event) => {
   try {
-    // Greife auf 'cart' zu (so wie es von index.html gesendet wird)
     const { cart } = JSON.parse(event.body);
 
     if (!cart || cart.length === 0) {
@@ -12,23 +11,25 @@ exports.handler = async function (event) {
       };
     }
 
-    // Wandle die Produkte für Stripe um
     const line_items = cart.map(item => ({
       price_data: {
         currency: 'chf',
         product_data: { name: item.name },
-        unit_amount: Math.round(item.price * 100), // Rappen/Cent-Betrag
+        unit_amount: Math.round(item.price * 100),
       },
       quantity: item.qty || 1,
     }));
 
-    // Erstelle die Stripe Checkout-Sitzung
+    // KORREKTE URLs für deine Domain
+    const success_url = "https://reliable-blancmange-ae6b05.netlify.app/?success=true";
+    const cancel_url = "https://reliable-blancmange-ae6b05.netlify.app/";
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items,
       mode: 'payment',
-      success_url: `${event.headers.origin || 'https://' + event.headers.host}/?success=true`,
-      cancel_url: `${event.headers.origin || 'https://' + event.headers.host}/`,
+      success_url,
+      cancel_url,
     });
 
     return {
@@ -36,10 +37,10 @@ exports.handler = async function (event) {
       body: JSON.stringify({ url: session.url }),
     };
   } catch (err) {
-    console.error('Stripe Fehler:', err);
-    return { 
-      statusCode: 500, 
-      body: JSON.stringify({ error: err.message }) 
+    console.error("Stripe Fehler:", err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message }),
     };
   }
 };

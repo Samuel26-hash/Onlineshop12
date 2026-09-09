@@ -1,1 +1,10 @@
+[functions]
+  node_bundler = "esbuild"
+
+[functions."create-checkout-session"]
+  external_node_modules = ["stripe"]
+  node_bundler = "esbuild"
+
+[web]
+  includeEnvironmentVariables = ["STRIPE_PK"]
 

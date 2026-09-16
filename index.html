@@ -217,7 +217,7 @@ textarea.form-input { resize: vertical; min-height: 120px; }
 </head>
 <body>
 
-<!-- 1. Aktion Oben Banner -->
+<!-- Aktion Oben Banner -->
 <div class="top-bar">
   ⚡ Herbst-Aktion: 15% Rabatt auf alle Flaschen mit Code <b>AURA15</b> | Gratis Versand ab 50 CHF
 </div>
@@ -250,7 +250,7 @@ textarea.form-input { resize: vertical; min-height: 120px; }
   </div>
 </section>
 
-<!-- 2. Vorteils-Slide (Garantie & Lieferung) -->
+<!-- Vorteils-Slide -->
 <section class="section" id="vorteile">
   <div class="wrap">
     <h2 class="section-title">Warum AURA?</h2>
@@ -275,7 +275,7 @@ textarea.form-input { resize: vertical; min-height: 120px; }
   </div>
 </section>
 
-<!-- 3. Produkte Slide (mit Kategorien & Farbauswahl) -->
+<!-- Produkte Slide -->
 <section class="section" id="produkte" style="background: #fff;">
   <div class="wrap">
     <h2 class="section-title">Unsere Modelle</h2>
@@ -294,7 +294,7 @@ textarea.form-input { resize: vertical; min-height: 120px; }
   </div>
 </section>
 
-<!-- 4. Über uns / Firma Slide -->
+<!-- Über uns / Firma Slide -->
 <section class="section" id="über-uns">
   <div class="wrap">
     <h2 class="section-title">Über AURA</h2>
@@ -305,7 +305,7 @@ textarea.form-input { resize: vertical; min-height: 120px; }
   </div>
 </section>
 
-<!-- 5. Kontakt Slide -->
+<!-- Kontakt Slide -->
 <section class="section" id="kontakt" style="background: #fff;">
   <div class="wrap">
     <h2 class="section-title">Kontaktiere Uns</h2>
@@ -437,7 +437,7 @@ function addToCart(id){
   if (existing) {
     existing.qty += 1;
   } else {
-    cart.push({ key: itemKey, id: product.id, name: product.name, color: color.name, price: product.price, qty: 1 });
+    cart.push({ key: itemKey, id: product.id, name: `${product.name} (${color.name})`, price: product.price, qty: 1 });
   }
   renderCart(); 
   openCart();
@@ -463,7 +463,6 @@ function renderCart(){
     <div class="cart-item">
       <div>
         <strong>${i.name}</strong>
-        <div style="font-size:12px; color:var(--text-muted);">Farbe: ${i.color}</div>
         <button class="cart-item-remove" onclick="removeFromCart('${i.key}')">Entfernen</button>
       </div>
       <div>${i.qty} × CHF ${i.price.toFixed(2)}</div>
@@ -491,10 +490,39 @@ cartToggle.addEventListener("click", openCart);
 cartClose.addEventListener("click", closeCart);
 cartBackdrop.addEventListener("click", closeCart);
 
-// Checkout via Netlify / Stripe Integration
+// Checkout via Cloudflare Function / Stripe Integration
 document.getElementById("checkoutBtn").addEventListener("click", async () => {
   if (cart.length === 0) return alert("Warenkorb ist leer!");
-  alert("Starte Checkout mit Stripe...");
+
+  const btn = document.getElementById("checkoutBtn");
+  btn.disabled = true;
+  btn.textContent = "Verbindung zu Stripe...";
+
+  try {
+    // Ruft Ihre Cloudflare Function unter /api/checkout auf
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cart: cart }),
+    });
+
+    const data = await response.json();
+
+    if (data.url) {
+      window.location.href = data.url; // Weiterleitung zu Stripe Checkout
+    } else {
+      alert("Fehler beim Checkout: " + (data.error || "Unbekannter Fehler"));
+      btn.disabled = false;
+      btn.textContent = "Zur Kasse";
+    }
+  } catch (err) {
+    console.error("Checkout Fehler:", err);
+    alert("Netzwerkfehler beim Starten des Checkouts.");
+    btn.disabled = false;
+    btn.textContent = "Zur Kasse";
+  }
 });
 
 renderProducts(); 
